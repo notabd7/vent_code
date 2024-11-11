@@ -1,11 +1,5 @@
-/**
- * -------------------------------------------------
- * BOREALIS Valve Control
- * -------------------------------------------------
- * TARGET DEVICE: MSP430G2230
- *
- * Authored by Kristoffer Allick 12/30/2022
- */
+// IT WORKS AND THE LIGHT BLINK EVERY 2 SEC
+
 
 
 #include <msp430.h>
@@ -28,7 +22,7 @@
 #define TRUE 1
 #define SERVO_ANGLE_BIG 650  //input desired pulse width here from roughly 1700-400 to change angle
 #define SERVO_ANGLE_SMALL 500 //input desired pulse width here from roughly 1700-400 to change angle
-
+#define TEN_SEC_DELAY 500  // 10 seconds = 500 periods (each period is 20ms)
 // ---------------------------------------------------------
 // =========================================================
 
@@ -44,14 +38,14 @@ void delay_SEC(int sec);
 unsigned char servo_status = CLOSED;
 unsigned int temp;
 unsigned long overflow_counter; // Used by delay62MS function & timer
-volatile unsigned char control_param = 0;
+unsigned long pulse_count = 0;
 
 /**
  * main.c
  */
 int main(void){
     WDTCTL = WDTPW | WDTHOLD;   // stop watchdog timer
-    servo_status= CLOSED;
+    servo_status= OPEN;
 
 
     // Configure output pins
@@ -82,10 +76,7 @@ int main(void){
     __enable_interrupt();
 
     while(TRUE){
-        delay_SEC(10);
-        control_param = 1;
-        delay_SEC(10);
-        control_param = 0;
+
     };
 
 }
@@ -96,7 +87,7 @@ void initTimer_A(void){
     TACCTL1 |=CCIE; //Enable CCR1 interrupt
     TACCR1 = 20000; //CCR1 intial value (Period) Sets the period to 20 milliseconds
 // Servo motors need a signal every 20ms to work properly
-    TACCR0 = TACCR1+SERVO_ANGLE_SMALL+(SERVO_ANGLE_BIG*servo_status*control_param); // CCR0 initial value (Pulse Width)
+    TACCR0 = TACCR1+SERVO_ANGLE_SMALL+(SERVO_ANGLE_BIG*servo_status); // CCR0 initial value (Pulse Width)
     TACTL = TASSEL_2 + ID_0 + MC_2; //Use SMCLK, SMLK/1, Counting Continous Mode
 }
 //Delays the inputted overflow
@@ -115,11 +106,40 @@ void Resist(void){
 
 //------------------------Interrupt Service Routines---------------------
 //Timer ISR
+//#pragma vector = TIMER0_A0_VECTOR
+//__interrupt void Timer_A_CCR0_ISR(void) {
+//   P1OUT &=~(SERVO);        //set SERVO low
+//   TACCR0 = TACCR1+SERVO_ANGLE_SMALL+(SERVO_ANGLE_BIG*servo_status);    //Adds one period // responsible for when to turn off ( in terms of pwm signalling)
+//}
+
+
 #pragma vector = TIMER0_A0_VECTOR
 __interrupt void Timer_A_CCR0_ISR(void) {
    P1OUT &=~(SERVO);        //set SERVO low
-   TACCR0 = TACCR1+SERVO_ANGLE_SMALL+(SERVO_ANGLE_BIG*servo_status*control_param);    //Add one Period
+
+   // Count pulses when in OPEN state
+   if(servo_status == OPEN) {
+       pulse_count++;
+
+       // Flash LED every second (50 pulses = 1 second)
+       if(pulse_count % 50 == 0) {
+           P1OUT ^= ON_LED;  // Toggle LED
+       }
+
+       // After 500 pulses (10 seconds), change PWM to CLOSED position
+       if(pulse_count >= TEN_SEC_DELAY) {
+           servo_status = CLOSED;
+           pulse_count = 0;
+           P1OUT |= ON_LED;  // Turn LED solid ON when closing
+       }
+   }
+
+   TACCR0 = TACCR1+SERVO_ANGLE_SMALL+(SERVO_ANGLE_BIG*servo_status);
 }
+
+
+
+
 //Servo ISR
 #pragma vector = TIMER0_A1_VECTOR
 __interrupt void Timer_A_CCR1_ISR(void){
@@ -143,6 +163,12 @@ __interrupt void Servo_change(void){
     }
     P1IFG &=~(XBEE3);
 }
+
+
+
+
+
+
 
 
 
