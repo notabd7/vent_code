@@ -1,9 +1,6 @@
 // this code starts the open close cycle once it receives an open command from xbee
 // stops the cycle when receives a close command
 //this code was controlling thevent on Nov 24, 2024 flight!
-//fingers crossed
-//please work
-//Muhammad Abdullah
 
 #include <msp430.h>
 // Configure pins (all in P1)
@@ -18,13 +15,13 @@
 #define SERVO  BIT7
 
 //servo
-#define CLOSED  0
-#define OPEN 1
+#define CLOSED  1
+#define OPEN 0
 //const unsigned char OPEN = 1;
 #define FALSE 0
 #define TRUE 1
-#define SERVO_ANGLE_BIG 1000  //input desired pulse width here from roughly 1700-400 to change angle
-#define SERVO_ANGLE_SMALL 420 //input desired pulse width here from roughly 1700-400 to change angle
+#define SERVO_ANGLE_BIG 650  //input desired pulse width here from roughly 1700-400 to change angle
+#define SERVO_ANGLE_SMALL 500 //input desired pulse width here from roughly 1700-400 to change angle
 #define CLOSE_TIME_DELAY 500  // 10 seconds = 500 periods (each period is 20ms)
 #define OPEN_TIME_DELAY 250 // 5 SEC
 // ---------------------------------------------------------
